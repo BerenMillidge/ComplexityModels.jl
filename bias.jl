@@ -75,17 +75,19 @@ function frac(l::Array{Agent})
     return total / length(l)
 end
 
-function step!(model)
+# the main aim of this is to show how strong the biasing effects of selectorate I assume are!
+
+function step!(model, base_threshold, discrim)
     for i in 1:length(model.current_agents)
         replaced = false
         agent = model.current_agents[i]
         while replaced ==false
             applicant = generate_applicant()
             #define the threshold
-            if applicant.agent_type != agent.agent_type
-                threshold = agent.threshold * agent.discrim_multiplier
+            if applicant.agent_type == 1 && agent.agent_type==2
+                threshold = base_threshold * discrim
             else
-                threshold = agent.threshold
+                threshold = base_threshold
             end
             if applicant.skill > threshold
                 # replace current agent with new one if above skill threshold!
@@ -108,13 +110,13 @@ frac_type_2(log::Array{Array{Agent}}) = [frac_type_2(i) for i in log]
 
 mean(arr::Array{Float64,1}) = sum(arr) / length(arr)
 
-function run_model(num_epochs, num_places)
+function run_model(num_epochs, num_places, threshold, discrim)
     # for now run all as type 1
     time::Array{Array{Agent}} = []
     current_agents = generate_agent_list(num_places)
     model = Model(num_places,0,0,current_agents)
     for i in 1:num_epochs
-        agents = step!(model)
+        agents = step!(model, threshold, discrim)
         push!(time, agents)
         #print(agents)
         #print("\n")
@@ -122,20 +124,23 @@ function run_model(num_epochs, num_places)
     return time, model 
 end
 
+
+        
+
 function plot_biases_thresholds()
     biases = [1,1.05,1.1,1.2,1.3,1.5]
-    thresholds = [80,100,110,120,130,140,150]
+    thresholds = [80,100,110,120,130,140,150,160]
     for bias in biases
         threshold_list::Array{Float64} = []
         type_2_discrim_multiplier = bias
         for threshold in thresholds
-            type_1_threshold = threshold
-            type_2_threshold = threshold
-            l,m = run_model(50,50)
+            print("$threshold, $bias \n")
+            l,m = run_model(50,50, threshold, bias)
             push!(threshold_list, mean(frac_type_2(l)))
         end
+        print("Plotting with $bias")
         plot!(threshold_list, label="Bias: $bias")
-        end
+    end
     xlabel!("Threshold")
     title!("Bias plot")
     savefig("bias_plot.png")
