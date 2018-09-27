@@ -28,7 +28,6 @@ mutable struct Point
 end
 
 print("Done!")
-
 function set_first_array!(model::Model, arr::Array{Int, 2})
     model.array = arr
 end
@@ -40,7 +39,7 @@ function flip_points!(model::Model, point_list::Array{Point})
 end
 
 function left_edge(model::Model, xpos::Int, ypos::Int)
-    if model.current_epochs - model.epochs_array[xpos, ypos] <model. refractory_period
+    if model.current_epoch - model.epochs_array[xpos, ypos] <model. refractory_period
         return 0
     end # don't change if above refractory period
     sum = 0
@@ -52,11 +51,13 @@ function left_edge(model::Model, xpos::Int, ypos::Int)
     if sum >= model.threshold
         model.epoch_array[xpos, ypos] = model.current_epoch
         return 1
+    else
+        return 0
     end
 end
 
 function right_edge(model::Model, xpos::Int, ypos::Int)
-    if model.current_epochs - model.epochs_array[xpos, ypos] <model. refractory_period
+    if model.current_epoch - model.epochs_array[xpos, ypos] <model. refractory_period
         return 0
     end # don't change if above refractory period
     sum = 0
@@ -68,11 +69,13 @@ function right_edge(model::Model, xpos::Int, ypos::Int)
     if sum >= model.threshold
         model.epoch_array[xpos, ypos] = model.current_epoch
         return 1
+    else
+        return 0
     end
 end
 
 function top_edge(model::Model, xpos::Int, ypos::Int)
-    if model.current_epochs - model.epochs_array[xpos, ypos] <model. refractory_period
+    if model.current_epoch - model.epochs_array[xpos, ypos] <model. refractory_period
         return 0
     end # don't change if above refractory period
     sum = 0
@@ -84,11 +87,13 @@ function top_edge(model::Model, xpos::Int, ypos::Int)
     if sum >= model.threshold
         model.epoch_array[xpos, ypos] = model.current_epoch
         return 1
+    else
+        return 0
     end
 end
 
 function bottom_edge(model::Model, xpos::Int, ypos::Int)
-    if model.current_epochs - model.epochs_array[xpos, ypos] <model. refractory_period
+    if model.current_epoch - model.epochs_array[xpos, ypos] <model. refractory_period
         return 0
     end # don't change if above refractory period
     sum = 0
@@ -100,12 +105,14 @@ function bottom_edge(model::Model, xpos::Int, ypos::Int)
     if sum >= model.threshold
         model.epoch_array[xpos, ypos] = model.current_epoch
         return 1
+    else
+        return 0 
     end
 end
 
 function check_square(model::Model,xpos::Int, ypos::Int)
     # count number of active around
-    if model.current_epochs - model.epochs_array[xpos, ypos] <model. refractory_period
+    if model.current_epoch - model.epochs_array[xpos, ypos] <model. refractory_period
         return 0
     end # don't change if above refractory period
         
@@ -120,6 +127,8 @@ function check_square(model::Model,xpos::Int, ypos::Int)
     if sum >= model.threshold
         model.epoch_array[xpos, ypos] = model.current_epoch
         return 1
+    else
+        return 0
     end
 end
 
@@ -136,11 +145,11 @@ function step!(model::Model)
     # don't exist on a torus... there are edge effects in nature
     # first all the top xs
     for y in 2:model.height -1
-        arr[0,y] = left_edge(model, 0, y)
+        arr[0,y] = left_edge(model, 1, y)
         arr[model.width, y] = right_edge(model, model.width, y)
     end
     for x in 2:model.width -1
-        arr[x,0] = bottom_edge(model, x, 0)
+        arr[x,0] = bottom_edge(model, x, 1)
         arr[x, model.height] = top_edge(model, x, model.height)
     end
     
@@ -158,11 +167,11 @@ end
 
 function run_model(width::Int, height::Int, max_epochs::Int, threshold::Int, refractory_period::Int,save_name,animate=true)
     model = Model(width, height, max_epochs, threshold, refractory_period)
-    fun_model(model,save_name,animate)
+    run_model(model,save_name,animate)
 end
 
 function run_model(model::Model,save_name, animate=true)
-    for 1:model.max_epochs
+    for i in 1:model.max_epochs
         step!(model)
     end
     
@@ -176,3 +185,7 @@ function run_model(model::Model,save_name, animate=true)
 end
     
 run_model(50,50, 100, 2, 0,'bib', true)
+    
+            
+            
+            
