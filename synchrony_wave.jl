@@ -145,11 +145,11 @@ function step!(model::Model)
     # don't exist on a torus... there are edge effects in nature
     # first all the top xs
     for y in 2:model.height -1
-        arr[0,y] = left_edge(model, 1, y)
+        arr[1,y] = left_edge(model, 1, y)
         arr[model.width, y] = right_edge(model, model.width, y)
     end
     for x in 2:model.width -1
-        arr[x,0] = bottom_edge(model, x, 1)
+        arr[x,1] = bottom_edge(model, x, 1)
         arr[x, model.height] = top_edge(model, x, model.height)
     end
     
@@ -176,15 +176,16 @@ function run_model(model::Model,save_name, animate=true)
     end
     
     # animate
-    if !(save_name.split(',')[-1] in ['gif','mp4'])
-        save_name *= '.mp4'
+    splits = split(save_name, '.')
+    if !(splits[length(splits)] in ["gif","mp4"])
+        save_name *= ".mp4"
     end
-    @gif for 1:model.max_epochs
+    @gif for i in 1:model.max_epochs
         plot(model.array_list[i])
     end
 end
     
-run_model(50,50, 100, 2, 0,'bib', true)
+run_model(50,50, 100, 2, 0,"bib", true)
     
             
             
