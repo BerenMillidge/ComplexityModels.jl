@@ -1,9 +1,7 @@
-# inspired by this paper:
-#Synchronization:  The Key  to  Effective Communication  in Animal  Collectives
-
 using Plots
 using Images
 using ImageView
+using Distances
 
 
 mutable struct Model
@@ -16,9 +14,13 @@ mutable struct Model
     array::Array{Int, 2}
     epochs_array::Array{Int, 2}
     array_list::Array{Array{Int, 2}}
+    changeback_prob::AbstractFloat
     
-    function Model(width::Int, height::Int, max_epochs::Int, threshold::Int, refractory_period::Int)
-        return new(width, height, 0, max_epochs,threshold,refractory_period, zeros((width, height)), zeros((width, height)), [])
+    function Model(width::Int, height::Int, max_epochs::Int, threshold::Int, refractory_period::Int, changeback_prob::Int)
+        if changeback_prob < 0 || changeback_prob > 1
+            throw("Changeback probability must be between 0 and 1")
+        end
+        return new(width, height, 0, max_epochs,threshold,refractory_period, zeros((width, height)), -1 * refractory_period * ones((width, height)), [], changeback_prob)
     end
 end
 
@@ -27,7 +29,8 @@ mutable struct Point
     y::Int
 end
 
-print("Done!")
+
+
 function set_first_array!(model::Model, arr::Array{Int, 2})
     model.array = arr
 end
@@ -42,6 +45,12 @@ function left_edge(model::Model, xpos::Int, ypos::Int)
     if model.current_epoch - model.epochs_array[xpos, ypos] <model. refractory_period
         return 0
     end # don't change if above refractory period
+    if model.array[xpos, ypos] == 1
+        rand = rand()
+        if rand < model.changeback_prob
+            return 0
+        end
+    end
     sum = 0
     for y in -1:1
         ycurr = ypos + y
@@ -49,7 +58,7 @@ function left_edge(model::Model, xpos::Int, ypos::Int)
         sum += model.array[xpos+1, ycurr]
     end
     if sum >= model.threshold
-        model.epoch_array[xpos, ypos] = model.current_epoch
+        model.epochs_array[xpos, ypos] = model.current_epoch
         return 1
     else
         return 0
@@ -57,9 +66,15 @@ function left_edge(model::Model, xpos::Int, ypos::Int)
 end
 
 function right_edge(model::Model, xpos::Int, ypos::Int)
-    if model.current_epoch - model.epochs_array[xpos, ypos] <model. refractory_period
+    if model.current_epoch - model.epochs_array[xpos, ypos] < model.refractory_period
         return 0
     end # don't change if above refractory period
+    if model.array[xpos, ypos] == 1
+        rand = rand()
+        if rand < model.changeback_prob
+            return 0
+        end
+    end
     sum = 0
     for y in -1:1
         ycurr = ypos + y
@@ -67,7 +82,7 @@ function right_edge(model::Model, xpos::Int, ypos::Int)
         sum += model.array[xpos-1, ycurr]
     end
     if sum >= model.threshold
-        model.epoch_array[xpos, ypos] = model.current_epoch
+        model.epochs_array[xpos, ypos] = model.current_epoch
         return 1
     else
         return 0
@@ -75,9 +90,15 @@ function right_edge(model::Model, xpos::Int, ypos::Int)
 end
 
 function top_edge(model::Model, xpos::Int, ypos::Int)
-    if model.current_epoch - model.epochs_array[xpos, ypos] <model. refractory_period
+    if model.current_epoch - model.epochs_array[xpos, ypos] <model.refractory_period
         return 0
     end # don't change if above refractory period
+    if model.array[xpos, ypos] == 1
+        rand = rand()
+        if rand < model.changeback_prob
+            return 0
+        end
+    end
     sum = 0
     for x in -1:1
         xcurr = xpos + x
@@ -85,7 +106,7 @@ function top_edge(model::Model, xpos::Int, ypos::Int)
         sum += model.array[xcurr, ypos]
     end
     if sum >= model.threshold
-        model.epoch_array[xpos, ypos] = model.current_epoch
+        model.epochs_array[xpos, ypos] = model.current_epoch
         return 1
     else
         return 0
@@ -93,9 +114,15 @@ function top_edge(model::Model, xpos::Int, ypos::Int)
 end
 
 function bottom_edge(model::Model, xpos::Int, ypos::Int)
-    if model.current_epoch - model.epochs_array[xpos, ypos] <model. refractory_period
+    if model.current_epoch - model.epochs_array[xpos, ypos] <model.refractory_period
         return 0
     end # don't change if above refractory period
+    if model.array[xpos, ypos] == 1
+        rand = rand()
+        if rand < model.changeback_prob
+            return 0
+        end
+    end
     sum = 0
     for x in -1:1
         xcurr = xpos + x
@@ -103,7 +130,7 @@ function bottom_edge(model::Model, xpos::Int, ypos::Int)
         sum += model.array[xcurr, ypos]
     end
     if sum >= model.threshold
-        model.epoch_array[xpos, ypos] = model.current_epoch
+        model.epochs_array[xpos, ypos] = model.current_epoch
         return 1
     else
         return 0 
@@ -112,9 +139,16 @@ end
 
 function check_square(model::Model,xpos::Int, ypos::Int)
     # count number of active around
-    if model.current_epoch - model.epochs_array[xpos, ypos] <model. refractory_period
+    if model.current_epoch - model.epochs_array[xpos, ypos] <model.refractory_period
         return 0
     end # don't change if above refractory period
+    # flip back with some stochasticity
+    if model.array[xpos, ypos] == 1
+        rand = rand()
+        if rand < model.changeback_prob
+            return 0
+        end
+    end
         
     sum = 0
     for x in -1:1
@@ -125,7 +159,7 @@ function check_square(model::Model,xpos::Int, ypos::Int)
         end
     end
     if sum >= model.threshold
-        model.epoch_array[xpos, ypos] = model.current_epoch
+        model.epochs_array[xpos, ypos] = model.current_epoch
         return 1
     else
         return 0
@@ -163,9 +197,32 @@ function step!(model::Model)
     model.current_epoch +=1
     push!(model.array_list, arr) # add the model to the array list... and hope this works
     # if I can get anything cool out of this, it will be worthwhile!
+    print(model.epochs_array)
 end
 
-function run_model(width::Int, height::Int, max_epochs::Int, threshold::Int, refractory_period::Int,save_name,animate=true)
+
+function set_circle_on(model::Model, xcenter::Int, ycenter::Int, radius::Int)
+    arr = copy(model.array) # only do this once... it doens't really hurt
+    r::Int = radius/2
+    w = model.width
+    h = model.height
+    
+    for x in xcenter-r:xcenter+r
+        if x >0 && x <=w
+            for y in ycenter-r:ycenter+r
+                if y > 0 && y <=w
+                    dist = euclidean([x,y], [xcenter, ycenter])
+                    if dist <= radius
+                        arr[x,y] = 1
+                    end
+                end
+            end
+        end
+    end
+    return arr            
+end
+
+function run_model(width::Int, height::Int, max_epochs::Int,threshold::Int, refractory_period::Int,save_name,animate=true)
     model = Model(width, height, max_epochs, threshold, refractory_period)
     run_model(model,save_name,animate)
 end
@@ -173,20 +230,41 @@ end
 function run_model(model::Model,save_name, animate=true)
     for i in 1:model.max_epochs
         step!(model)
+        #print(model.array)
     end
     
     # animate
-    splits = split(save_name, '.')
-    if !(splits[length(splits)] in ["gif","mp4"])
-        save_name *= ".mp4"
-    end
-    @gif for i in 1:model.max_epochs
-        plot(model.array_list[i])
+    if animate == true
+        splits = split(save_name, '.')
+        if !(splits[length(splits)] in ["gif","mp4"])
+            save_name *= ".mp4"
+        end
+        anim = @animate for i in 1:length(model.array_list)
+            heatmap(model.array_list[i], c=:ice)
+        end
+        gif(anim, "synchrony.mp4", fps=30)
     end
 end
+
+function run_model(model::Model,xcenter, ycenter, radius,save_name, animate=true)
+    model.array = set_circle_on(model, xcenter, ycenter, radius)
+    for i in 1:model.max_epochs
+        step!(model)
+        #print(model.array)
+    end
     
-run_model(50,50, 100, 2, 0,"bib", true)
-    
-            
-            
-            
+    # animate
+    if animate == true
+        splits = split(save_name, '.')
+        if !(splits[length(splits)] in ["gif","mp4"])
+            save_name *= ".mp4"
+        end
+        anim = @animate for i in 1:length(model.array_list)
+            heatmap(model.array_list[i], c=:ice)
+        end
+        gif(anim, "synchrony.mp4", fps=30)
+    end
+end
+
+model = Model(50,50,100,2,3,0.3)
+run_model(model, 25,25,2,"bib", true)
