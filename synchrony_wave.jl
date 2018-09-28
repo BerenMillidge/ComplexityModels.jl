@@ -29,7 +29,7 @@ mutable struct Point
     y::Int
 end
 
-
+# now define the step function
 
 function set_first_array!(model::Model, arr::Array{Int, 2})
     model.array = arr
@@ -46,10 +46,11 @@ function left_edge(model::Model, xpos::Int, ypos::Int)
         return 0
     end # don't change if above refractory period
     if model.array[xpos, ypos] == 1
-        rand = rand()
-        if rand < model.changeback_prob
+        r = rand()
+        if r < model.changeback_prob
             return 0
         end
+        return 1
     end
     sum = 0
     for y in -1:1
@@ -70,10 +71,11 @@ function right_edge(model::Model, xpos::Int, ypos::Int)
         return 0
     end # don't change if above refractory period
     if model.array[xpos, ypos] == 1
-        rand = rand()
-        if rand < model.changeback_prob
+        r = rand()
+        if r < model.changeback_prob
             return 0
         end
+        return 1
     end
     sum = 0
     for y in -1:1
@@ -94,10 +96,11 @@ function top_edge(model::Model, xpos::Int, ypos::Int)
         return 0
     end # don't change if above refractory period
     if model.array[xpos, ypos] == 1
-        rand = rand()
-        if rand < model.changeback_prob
+        r = rand()
+        if r < model.changeback_prob
             return 0
         end
+        return 1
     end
     sum = 0
     for x in -1:1
@@ -118,10 +121,11 @@ function bottom_edge(model::Model, xpos::Int, ypos::Int)
         return 0
     end # don't change if above refractory period
     if model.array[xpos, ypos] == 1
-        rand = rand()
-        if rand < model.changeback_prob
+        r = rand()
+        if r < model.changeback_prob
             return 0
         end
+        return 1
     end
     sum = 0
     for x in -1:1
@@ -144,10 +148,11 @@ function check_square(model::Model,xpos::Int, ypos::Int)
     end # don't change if above refractory period
     # flip back with some stochasticity
     if model.array[xpos, ypos] == 1
-        rand = rand()
-        if rand < model.changeback_prob
+        r = rand()
+        if r < model.changeback_prob
             return 0
         end
+        return 1
     end
         
     sum = 0
@@ -197,7 +202,7 @@ function step!(model::Model)
     model.current_epoch +=1
     push!(model.array_list, arr) # add the model to the array list... and hope this works
     # if I can get anything cool out of this, it will be worthwhile!
-    print(model.epochs_array)
+    #print(model.epochs_array)
 end
 
 
@@ -262,9 +267,14 @@ function run_model(model::Model,xcenter, ycenter, radius,save_name, animate=true
         anim = @animate for i in 1:length(model.array_list)
             heatmap(model.array_list[i], c=:ice)
         end
-        gif(anim, "synchrony.mp4", fps=30)
+        gif(anim, save_name, fps=30)
     end
 end
 
-model = Model(50,50,100,2,3,0.3)
-run_model(model, 25,25,2,"bib", true)
+for i in 1:10  
+    print("Running model: " * string(i))
+    model = Model(50,50,500,2,4,0.9)
+    run_model(model, 25,25,2,"wave_test_2_" * string(i) *".mp4", true)
+end
+print("Done!")
+pwd()
