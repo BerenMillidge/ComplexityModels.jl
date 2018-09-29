@@ -1,3 +1,5 @@
+#__precompile()__
+
 using Plots
 using Images
 using ImageView
@@ -16,7 +18,7 @@ mutable struct Model
     array_list::Array{Array{Int, 2}}
     changeback_prob::AbstractFloat
     
-    function Model(width::Int, height::Int, max_epochs::Int, threshold::Int, refractory_period::Int, changeback_prob::Int)
+    function Model(width::Int, height::Int, max_epochs::Int, threshold::Int, refractory_period::Int, changeback_prob::AbstractFloat)
         if changeback_prob < 0 || changeback_prob > 1
             throw("Changeback probability must be between 0 and 1")
         end
@@ -29,7 +31,6 @@ mutable struct Point
     y::Int
 end
 
-# now define the step function
 
 function set_first_array!(model::Model, arr::Array{Int, 2})
     model.array = arr
@@ -42,19 +43,20 @@ function flip_points!(model::Model, point_list::Array{Point})
 end
 
 function left_edge(model::Model, xpos::Int, ypos::Int)
-    if model.current_epoch - model.epochs_array[xpos, ypos] <model. refractory_period
-        return 0
-    end # don't change if above refractory period
-    if model.array[xpos, ypos] == 1
+    if model.array[xpos, ypos] >0
         r = rand()
         if r < model.changeback_prob
             return 0
+        else
+            return 1
         end
-        return 1
     end
-    sum = 0
-    for y in -1:1
-        ycurr = ypos + y
+    if model.current_epoch - model.epochs_array[xpos, ypos] <model. refractory_period
+        return 0
+    end # don't change if above refractory period
+    sum::Int = 0
+    for y::Int in -1:1
+        ycurr::Int = ypos + y
         sum += model.array[xpos, ycurr]
         sum += model.array[xpos+1, ycurr]
     end
@@ -67,19 +69,20 @@ function left_edge(model::Model, xpos::Int, ypos::Int)
 end
 
 function right_edge(model::Model, xpos::Int, ypos::Int)
-    if model.current_epoch - model.epochs_array[xpos, ypos] < model.refractory_period
-        return 0
-    end # don't change if above refractory period
-    if model.array[xpos, ypos] == 1
+    if model.array[xpos, ypos] > 0
         r = rand()
         if r < model.changeback_prob
             return 0
+        else
+            return 1
         end
-        return 1
     end
-    sum = 0
-    for y in -1:1
-        ycurr = ypos + y
+    if model.current_epoch - model.epochs_array[xpos, ypos] < model.refractory_period
+        return 0
+    end # don't change if above refractory period
+    sum::Int = 0
+    for y::Int in -1:1
+        ycurr::Int = ypos + y
         sum += model.array[xpos, ycurr]
         sum += model.array[xpos-1, ycurr]
     end
@@ -92,19 +95,20 @@ function right_edge(model::Model, xpos::Int, ypos::Int)
 end
 
 function top_edge(model::Model, xpos::Int, ypos::Int)
-    if model.current_epoch - model.epochs_array[xpos, ypos] <model.refractory_period
-        return 0
-    end # don't change if above refractory period
-    if model.array[xpos, ypos] == 1
+    if model.array[xpos, ypos] > 0
         r = rand()
         if r < model.changeback_prob
             return 0
+        else
+            return 1
         end
-        return 1
     end
-    sum = 0
-    for x in -1:1
-        xcurr = xpos + x
+    if model.current_epoch - model.epochs_array[xpos, ypos] <model.refractory_period
+        return 0
+    end # don't change if above refractory period
+    sum::Int = 0
+    for x::Int in -1:1
+        xcurr::Int = xpos + x
         sum += model.array[xcurr, ypos-1]
         sum += model.array[xcurr, ypos]
     end
@@ -117,19 +121,20 @@ function top_edge(model::Model, xpos::Int, ypos::Int)
 end
 
 function bottom_edge(model::Model, xpos::Int, ypos::Int)
-    if model.current_epoch - model.epochs_array[xpos, ypos] <model.refractory_period
-        return 0
-    end # don't change if above refractory period
-    if model.array[xpos, ypos] == 1
+    if model.array[xpos, ypos] > 0
         r = rand()
         if r < model.changeback_prob
             return 0
+        else
+            return 1
         end
-        return 1
     end
-    sum = 0
-    for x in -1:1
-        xcurr = xpos + x
+     if model.current_epoch - model.epochs_array[xpos, ypos] <model.refractory_period
+        return 0
+    end # don't change if above refractory period
+    sum::Int = 0
+    for x::Int in -1:1
+        xcurr::Int = xpos + x
         sum += model.array[xcurr, ypos+1]
         sum += model.array[xcurr, ypos]
     end
@@ -142,24 +147,24 @@ function bottom_edge(model::Model, xpos::Int, ypos::Int)
 end
 
 function check_square(model::Model,xpos::Int, ypos::Int)
-    # count number of active around
-    if model.current_epoch - model.epochs_array[xpos, ypos] <model.refractory_period
-        return 0
-    end # don't change if above refractory period
+    # count number of active around # don't change if above refractory period
     # flip back with some stochasticity
-    if model.array[xpos, ypos] == 1
+    if model.array[xpos, ypos] > 0
         r = rand()
         if r < model.changeback_prob
             return 0
+        else
+            return 1
         end
-        return 1
     end
-        
-    sum = 0
-    for x in -1:1
-        for y in -1:1
-            currx = xpos + x
-            curry = ypos + y
+    if model.current_epoch - model.epochs_array[xpos, ypos] <model.refractory_period
+        return 0
+    end
+    sum::Int = 0
+    for x::Int in -1:1
+        for y::Int in -1:1
+            currx::Int = xpos + x
+            curry::Int = ypos + y
             sum += model.array[currx, curry]
         end
     end
@@ -183,18 +188,18 @@ function step!(model::Model)
     # actually I should perhaps try implementing this on a torus... except the obvious fact that bees or whatever
     # don't exist on a torus... there are edge effects in nature
     # first all the top xs
-    for y in 2:model.height -1
+    for y::Int in 2:model.height -1
         arr[1,y] = left_edge(model, 1, y)
         arr[model.width, y] = right_edge(model, model.width, y)
     end
-    for x in 2:model.width -1
+    for x::Int in 2:model.width -1
         arr[x,1] = bottom_edge(model, x, 1)
         arr[x, model.height] = top_edge(model, x, model.height)
     end
     
         
-    for x in 2:model.width-1
-        for y in 2:model.height-1
+    for x::Int in 2:model.width-1
+        for y::Int in 2:model.height-1
             arr[x,y] = check_square(model, x,y)
         end
     end
@@ -208,7 +213,7 @@ end
 
 function set_circle_on(model::Model, xcenter::Int, ycenter::Int, radius::Int)
     arr = copy(model.array) # only do this once... it doens't really hurt
-    r::Int = radius/2
+    r = radius
     w = model.width
     h = model.height
     
@@ -271,10 +276,20 @@ function run_model(model::Model,xcenter, ycenter, radius,save_name, animate=true
     end
 end
 
-for i in 1:10  
-    print("Running model: " * string(i))
-    model = Model(50,50,500,2,4,0.9)
-    run_model(model, 25,25,2,"wave_test_2_" * string(i) *".mp4", true)
+function run_models()
+    for i in 1:10
+        print("Running model: " * string(i))
+        width = 50
+        height = 50
+        num_epochs = 500
+        threshold = 2
+        refractory_period = 5
+        changeback_prob = 0.7
+        model::Model = Model(width, height, num_epochs, threshold, refractory_period, changeback_prob)
+        sname = "wave_" * string(width) * "_" * string(height) * "_" * string(threshold) * "_" * string(refractory_period) * "_" * string(changeback_prob) * "_" * string(i) * ".mp4"
+        run_model(model, 25,25,2,sname, true)
+        #model = 0
+    end
 end
 print("Done!")
 pwd()
